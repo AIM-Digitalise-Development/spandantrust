@@ -39,7 +39,7 @@ export async function POST(request) {
       expiresAt,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://spandantrust-two.vercel.app/';
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
     await sendPasswordResetEmail({
