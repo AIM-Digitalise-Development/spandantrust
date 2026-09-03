@@ -8,10 +8,10 @@ export default function ReceivedSuppliesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  const fetchReceivedSupplies = async () => {
+  const fetchReceivedSupplies = async (searchTerm = search) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/supplies/received?search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/supplies/received?search=${encodeURIComponent(searchTerm)}`);
       const data = await res.json();
       if (data.success) {
         setSupplies(data.supplies || []);
@@ -24,7 +24,11 @@ export default function ReceivedSuppliesPage() {
   };
 
   useEffect(() => {
-    fetchReceivedSupplies();
+    const timer = setTimeout(() => {
+      fetchReceivedSupplies(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search]);
 
   return (
