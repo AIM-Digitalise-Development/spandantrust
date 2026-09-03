@@ -103,7 +103,7 @@ export default function DownlineWorkReportsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <FileText className="h-7 w-7 text-teal-500" /> Downline Work Reports
+          <FileText className="h-7 w-7 text-teal-500" /> Downline Work Report
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Track cumulative medicine distribution, patient entries, and activity logs across your organizational downline.
