@@ -22,10 +22,10 @@ export default function ManageAgentsPage() {
   const [formError, setFormError] = useState('');
   const [createdResult, setCreatedResult] = useState(null);
 
-  const fetchAgents = async () => {
+  const fetchAgents = async (searchTerm = search) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/users?role=DIGITAL_OPD_AGENT&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/users?role=DIGITAL_OPD_AGENT&search=${encodeURIComponent(searchTerm)}`);
       const data = await res.json();
       if (data.success) {
         setAgents(data.users || []);
@@ -38,7 +38,11 @@ export default function ManageAgentsPage() {
   };
 
   useEffect(() => {
-    fetchAgents();
+    const timer = setTimeout(() => {
+      fetchAgents(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search]);
 
   const handleCreateAgent = async (e) => {

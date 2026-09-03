@@ -56,5 +56,6 @@ const SupplySchema = new mongoose.Schema(
 );
 
 SupplySchema.index({ receiver: 1, supplyDate: -1 });
+SupplySchema.index({ sender: 1, supplyDate: -1 });
 
 export default mongoose.models.Supply || mongoose.model('Supply', SupplySchema);

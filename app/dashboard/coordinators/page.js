@@ -22,10 +22,10 @@ export default function ManageCoordinatorsPage() {
   const [formError, setFormError] = useState('');
   const [createdResult, setCreatedResult] = useState(null);
 
-  const fetchCoordinators = async () => {
+  const fetchCoordinators = async (searchTerm = search) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/users?role=COORDINATOR&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/users?role=COORDINATOR&search=${encodeURIComponent(searchTerm)}`);
       const data = await res.json();
       if (data.success) {
         setCoordinators(data.users || []);
@@ -38,7 +38,11 @@ export default function ManageCoordinatorsPage() {
   };
 
   useEffect(() => {
-    fetchCoordinators();
+    const timer = setTimeout(() => {
+      fetchCoordinators(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search]);
 
   const handleCreateCoordinator = async (e) => {

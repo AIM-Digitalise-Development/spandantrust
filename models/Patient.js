@@ -59,4 +59,6 @@ const PatientSchema = new mongoose.Schema(
   }
 );
 
+PatientSchema.index({ agent: 1, visitDate: -1 });
+
 export default mongoose.models.Patient || mongoose.model('Patient', PatientSchema);

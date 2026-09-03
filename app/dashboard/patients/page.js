@@ -24,11 +24,11 @@ export default function DigitalOPDPatientsPage() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (searchTerm = search) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (search) params.append('search', search);
+      if (searchTerm) params.append('search', searchTerm);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
@@ -45,7 +45,11 @@ export default function DigitalOPDPatientsPage() {
   };
 
   useEffect(() => {
-    fetchPatients();
+    const timer = setTimeout(() => {
+      fetchPatients(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search, startDate, endDate]);
 
   const handleAddPatient = async (e) => {

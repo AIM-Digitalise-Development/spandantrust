@@ -78,5 +78,7 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
+UserSchema.index({ parent: 1, role: 1 });
+
 // Prevent re-compilation of model during hot reloads
 export default mongoose.models.User || mongoose.model('User', UserSchema);

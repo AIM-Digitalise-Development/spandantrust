@@ -27,12 +27,12 @@ export async function GET(request) {
       let query = {};
       if (roleParam) query.role = roleParam;
       if (userIdParam) query._id = userIdParam;
-      const users = await User.find(query).select('_id name userId role email mobile');
+      const users = await User.find(query).select('_id name userId role email mobile').lean();
       allowedUserIds = users.map((u) => u._id);
     } else if (authUser.role === 'COORDINATOR') {
-      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id');
+      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id').lean();
       const supIds = supervisors.map((s) => s._id);
-      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       const agentIds = agents.map((a) => a._id);
       
       let allAllowed = [authUser._id, ...supIds, ...agentIds];
@@ -41,7 +41,7 @@ export async function GET(request) {
       }
       allowedUserIds = allAllowed;
     } else if (authUser.role === 'SUPERVISOR') {
-      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       let agentIds = agents.map((a) => a._id);
       let allAllowed = [authUser._id, ...agentIds];
       if (userIdParam) {
@@ -68,7 +68,8 @@ export async function GET(request) {
     // Fetch user details for allowed User IDs
     const targetUsers = await User.find({ _id: { $in: allowedUserIds } })
       .select('name userId role email mobile status parent')
-      .populate('parent', 'name userId role');
+      .populate('parent', 'name userId role')
+      .lean();
 
     // Aggregate metrics per user
     const reportData = await Promise.all(
@@ -77,16 +78,16 @@ export async function GET(request) {
         let downlineUserIds = [user._id];
 
         if (user.role === 'ADMIN') {
-          const allUsers = await User.find({}).select('_id');
+          const allUsers = await User.find({}).select('_id').lean();
           downlineUserIds = allUsers.map((u) => u._id);
         } else if (user.role === 'COORDINATOR') {
-          const supervisors = await User.find({ parent: user._id, role: 'SUPERVISOR' }).select('_id');
+          const supervisors = await User.find({ parent: user._id, role: 'SUPERVISOR' }).select('_id').lean();
           const supIds = supervisors.map((s) => s._id);
-          const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+          const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
           const agentIds = agents.map((a) => a._id);
           downlineUserIds = [user._id, ...supIds, ...agentIds];
         } else if (user.role === 'SUPERVISOR') {
-          const agents = await User.find({ parent: user._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+          const agents = await User.find({ parent: user._id, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
           const agentIds = agents.map((a) => a._id);
           downlineUserIds = [user._id, ...agentIds];
         }
@@ -104,10 +105,12 @@ export async function GET(request) {
         const [suppliesSent, suppliesReceived, patientsEntered] = await Promise.all([
           Supply.find(supplyQuery)
             .populate('receiver', 'name userId role email mobile')
-            .sort({ supplyDate: -1 }),
+            .sort({ supplyDate: -1 })
+            .lean(),
           Supply.find(receivedQuery)
             .populate('sender', 'name userId role email mobile')
-            .sort({ supplyDate: -1 }),
+            .sort({ supplyDate: -1 })
+            .lean(),
           Patient.find(patientQuery)
             .populate({
               path: 'agent',
@@ -117,7 +120,8 @@ export async function GET(request) {
                 select: 'name userId role email mobile',
               },
             })
-            .sort({ visitDate: -1 }),
+            .sort({ visitDate: -1 })
+            .lean(),
         ]);
 
         const totalSentAmount = suppliesSent.reduce((sum, s) => sum + (s.totalAmount || 0), 0);

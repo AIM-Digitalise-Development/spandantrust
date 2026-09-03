@@ -25,13 +25,13 @@ export async function GET() {
     });
 
     if (authUser.role === 'ADMIN') {
-      const coordinators = await User.find({ role: 'COORDINATOR' }).sort({ name: 1 });
+      const coordinators = await User.find({ role: 'COORDINATOR' }).sort({ name: 1 }).lean();
       const coordIds = coordinators.map((c) => c._id);
       
-      const supervisors = await User.find({ parent: { $in: coordIds }, role: 'SUPERVISOR' }).sort({ name: 1 });
+      const supervisors = await User.find({ parent: { $in: coordIds }, role: 'SUPERVISOR' }).sort({ name: 1 }).lean();
       const supIds = supervisors.map((s) => s._id);
 
-      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 });
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 }).lean();
 
       const coordMap = new Map();
       coordinators.forEach((c) => coordMap.set(c._id.toString(), formatNode(c, [])));
@@ -40,7 +40,7 @@ export async function GET() {
       supervisors.forEach((s) => {
         const supNode = formatNode(s, []);
         supMap.set(s._id.toString(), supNode);
-        const parentCoord = coordMap.get(s.parent.toString());
+        const parentCoord = coordMap.get(s.parent ? s.parent.toString() : '');
         if (parentCoord) {
           parentCoord.children.push(supNode);
         }
@@ -48,7 +48,7 @@ export async function GET() {
 
       agents.forEach((a) => {
         const agentNode = formatNode(a, []);
-        const parentSup = supMap.get(a.parent.toString());
+        const parentSup = supMap.get(a.parent ? a.parent.toString() : '');
         if (parentSup) {
           parentSup.children.push(agentNode);
         }
@@ -59,10 +59,10 @@ export async function GET() {
     }
 
     if (authUser.role === 'COORDINATOR') {
-      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).sort({ name: 1 });
+      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).sort({ name: 1 }).lean();
       const supIds = supervisors.map((s) => s._id);
 
-      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 });
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 }).lean();
 
       const supMap = new Map();
       supervisors.forEach((s) => {
@@ -72,7 +72,7 @@ export async function GET() {
 
       agents.forEach((a) => {
         const agentNode = formatNode(a, []);
-        const parentSup = supMap.get(a.parent.toString());
+        const parentSup = supMap.get(a.parent ? a.parent.toString() : '');
         if (parentSup) {
           parentSup.children.push(agentNode);
         }
@@ -83,7 +83,7 @@ export async function GET() {
     }
 
     if (authUser.role === 'SUPERVISOR') {
-      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 });
+      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).sort({ name: 1 }).lean();
       const agentNodes = agents.map((a) => formatNode(a, []));
       const rootNode = formatNode(authUser, agentNodes);
       return NextResponse.json({ success: true, tree: rootNode });

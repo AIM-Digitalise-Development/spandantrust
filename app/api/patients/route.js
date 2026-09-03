@@ -83,13 +83,13 @@ export async function GET(request) {
     if (authUser.role === 'DIGITAL_OPD_AGENT') {
       agentFilter = { agent: authUser._id };
     } else if (authUser.role === 'SUPERVISOR') {
-      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       const agentIds = agents.map((a) => a._id);
       agentFilter = { agent: { $in: agentIds } };
     } else if (authUser.role === 'COORDINATOR') {
-      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id');
+      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id').lean();
       const supIds = supervisors.map((s) => s._id);
-      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       const agentIds = agents.map((a) => a._id);
       agentFilter = { agent: { $in: agentIds } };
     } else if (authUser.role === 'ADMIN') {
@@ -126,7 +126,8 @@ export async function GET(request) {
           select: 'name userId role email mobile',
         },
       })
-      .sort({ visitDate: -1, createdAt: -1 });
+      .sort({ visitDate: -1, createdAt: -1 })
+      .lean();
 
     return NextResponse.json({
       success: true,

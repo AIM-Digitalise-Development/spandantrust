@@ -22,10 +22,10 @@ export default function ManageSupervisorsPage() {
   const [formError, setFormError] = useState('');
   const [createdResult, setCreatedResult] = useState(null);
 
-  const fetchSupervisors = async () => {
+  const fetchSupervisors = async (searchTerm = search) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/users?role=SUPERVISOR&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/users?role=SUPERVISOR&search=${encodeURIComponent(searchTerm)}`);
       const data = await res.json();
       if (data.success) {
         setSupervisors(data.users || []);
@@ -38,7 +38,11 @@ export default function ManageSupervisorsPage() {
   };
 
   useEffect(() => {
-    fetchSupervisors();
+    const timer = setTimeout(() => {
+      fetchSupervisors(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search]);
 
   const handleCreateSupervisor = async (e) => {

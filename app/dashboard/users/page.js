@@ -9,12 +9,12 @@ export default function AllUsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [search, setSearch] = useState('');
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (searchTerm = search) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (roleFilter) params.append('role', roleFilter);
-      if (search) params.append('search', search);
+      if (searchTerm) params.append('search', searchTerm);
 
       const res = await fetch(`/api/users?${params.toString()}`);
       const data = await res.json();
@@ -29,7 +29,11 @@ export default function AllUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    const timer = setTimeout(() => {
+      fetchUsers(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [roleFilter, search]);
 
   const getRoleBadgeStyle = (role) => {

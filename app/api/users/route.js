@@ -26,7 +26,7 @@ export async function GET(request) {
     } else if (authUser.role === 'COORDINATOR') {
       if (roleFilter === 'DIGITAL_OPD_AGENT') {
         // Coordinator viewing downline Agents: find all Supervisors of this Coordinator first
-        const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id');
+        const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id').lean();
         const supervisorIds = supervisors.map((s) => s._id);
         query = { parent: { $in: supervisorIds }, role: 'DIGITAL_OPD_AGENT' };
       } else {
@@ -56,7 +56,8 @@ export async function GET(request) {
     const users = await User.find(query)
       .populate('parent', 'name userId role')
       .select('-passwordHash')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     return NextResponse.json({
       success: true,

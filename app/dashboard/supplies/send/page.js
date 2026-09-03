@@ -20,12 +20,12 @@ export default function SendMedicineSupplyPage() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const loadData = async () => {
+  const loadData = async (searchTerm = search) => {
     try {
       setLoading(true);
       const [usersRes, suppliesRes] = await Promise.all([
         fetch('/api/users'),
-        fetch(`/api/supplies?search=${encodeURIComponent(search)}`),
+        fetch(`/api/supplies?search=${encodeURIComponent(searchTerm)}`),
       ]);
 
       const usersData = await usersRes.json();
@@ -41,7 +41,11 @@ export default function SendMedicineSupplyPage() {
   };
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      loadData(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [search]);
 
   const handleSendSupply = async (e) => {

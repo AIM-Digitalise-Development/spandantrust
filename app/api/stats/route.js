@@ -19,19 +19,29 @@ export async function GET() {
         totalCoordinators,
         totalSupervisors,
         totalAgents,
-        supplies,
+        supplyAgg,
         totalPatients,
       ] = await Promise.all([
         User.countDocuments({ role: 'COORDINATOR' }),
         User.countDocuments({ role: 'SUPERVISOR' }),
         User.countDocuments({ role: 'DIGITAL_OPD_AGENT' }),
-        Supply.find({}),
+        Supply.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalSuppliesCount: { $sum: 1 },
+              totalQuantitySupplied: { $sum: '$totalQuantity' },
+              totalSupplyAmount: { $sum: '$totalAmount' },
+            },
+          },
+        ]),
         Patient.countDocuments({}),
       ]);
 
-      const totalSuppliesCount = supplies.length;
-      const totalQuantitySupplied = supplies.reduce((acc, s) => acc + (s.totalQuantity || 0), 0);
-      const totalSupplyAmount = supplies.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+      const aggStats = supplyAgg[0] || {};
+      const totalSuppliesCount = aggStats.totalSuppliesCount || 0;
+      const totalQuantitySupplied = aggStats.totalQuantitySupplied || 0;
+      const totalSupplyAmount = aggStats.totalSupplyAmount || 0;
 
       return NextResponse.json({
         success: true,
@@ -48,23 +58,34 @@ export async function GET() {
     }
 
     if (authUser.role === 'COORDINATOR') {
-      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id');
+      const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id').lean();
       const supIds = supervisors.map((s) => s._id);
-      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       const agentIds = agents.map((a) => a._id);
 
       const downlineUserIds = [authUser._id, ...supIds, ...agentIds];
 
-      const [receivedSupplies, sentSupplies, totalPatients] = await Promise.all([
-        Supply.find({ receiver: authUser._id }),
-        Supply.find({ sender: authUser._id }),
+      const [receivedCount, sentAgg, totalPatients] = await Promise.all([
+        Supply.countDocuments({ receiver: authUser._id }),
+        Supply.aggregate([
+          { $match: { sender: authUser._id } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              totalQuantity: { $sum: '$totalQuantity' },
+              totalAmount: { $sum: '$totalAmount' },
+            },
+          },
+        ]),
         Patient.countDocuments({ agent: { $in: downlineUserIds } }),
       ]);
 
-      const medicineReceivedCount = receivedSupplies.length;
-      const medicineSuppliedCount = sentSupplies.length;
-      const totalSentQuantity = sentSupplies.reduce((acc, s) => acc + (s.totalQuantity || 0), 0);
-      const totalSentAmount = sentSupplies.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+      const sentStats = sentAgg[0] || {};
+      const medicineReceivedCount = receivedCount;
+      const medicineSuppliedCount = sentStats.count || 0;
+      const totalSentQuantity = sentStats.totalQuantity || 0;
+      const totalSentAmount = sentStats.totalAmount || 0;
 
       return NextResponse.json({
         success: true,
@@ -81,21 +102,32 @@ export async function GET() {
     }
 
     if (authUser.role === 'SUPERVISOR') {
-      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id').lean();
       const agentIds = agents.map((a) => a._id);
 
       const downlineUserIds = [authUser._id, ...agentIds];
 
-      const [receivedSupplies, sentSupplies, totalPatients] = await Promise.all([
-        Supply.find({ receiver: authUser._id }),
-        Supply.find({ sender: authUser._id }),
+      const [receivedCount, sentAgg, totalPatients] = await Promise.all([
+        Supply.countDocuments({ receiver: authUser._id }),
+        Supply.aggregate([
+          { $match: { sender: authUser._id } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              totalQuantity: { $sum: '$totalQuantity' },
+              totalAmount: { $sum: '$totalAmount' },
+            },
+          },
+        ]),
         Patient.countDocuments({ agent: { $in: downlineUserIds } }),
       ]);
 
-      const medicineReceivedCount = receivedSupplies.length;
-      const medicineSuppliedCount = sentSupplies.length;
-      const totalSentQuantity = sentSupplies.reduce((acc, s) => acc + (s.totalQuantity || 0), 0);
-      const totalSentAmount = sentSupplies.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+      const sentStats = sentAgg[0] || {};
+      const medicineReceivedCount = receivedCount;
+      const medicineSuppliedCount = sentStats.count || 0;
+      const totalSentQuantity = sentStats.totalQuantity || 0;
+      const totalSentAmount = sentStats.totalAmount || 0;
 
       return NextResponse.json({
         success: true,
@@ -117,7 +149,7 @@ export async function GET() {
     const [totalPatients, todayPatients, recentPatients] = await Promise.all([
       Patient.countDocuments({ agent: authUser._id }),
       Patient.countDocuments({ agent: authUser._id, visitDate: { $gte: startOfDay } }),
-      Patient.find({ agent: authUser._id }).sort({ visitDate: -1 }).limit(5),
+      Patient.find({ agent: authUser._id }).sort({ visitDate: -1 }).limit(5).lean(),
     ]);
 
     return NextResponse.json({

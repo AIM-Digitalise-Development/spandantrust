@@ -107,7 +107,8 @@ export async function GET(request) {
 
     const supplies = await Supply.find(query)
       .populate('receiver', 'name userId role email mobile')
-      .sort({ supplyDate: -1 });
+      .sort({ supplyDate: -1 })
+      .lean();
 
     return NextResponse.json({
       success: true,
