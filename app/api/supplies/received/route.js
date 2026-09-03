@@ -22,8 +22,9 @@ export async function GET(request) {
     }
 
     const supplies = await Supply.find(query)
-      .populate('sender', 'name userId role email mobile')
-      .sort({ supplyDate: -1 });
+      .populate('sender', 'name userId role')
+      .sort({ supplyDate: -1 })
+      .lean();
 
     return NextResponse.json({
       success: true,
