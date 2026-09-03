@@ -13,6 +13,8 @@ export default function DashboardLayout({ children }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
+    if (user) return;
+
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me');
@@ -33,7 +35,7 @@ export default function DashboardLayout({ children }) {
     }
 
     checkAuth();
-  }, [router]);
+  }, [user, router]);
 
   if (loading) {
     return (
