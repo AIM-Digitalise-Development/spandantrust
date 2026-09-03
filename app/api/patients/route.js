@@ -118,7 +118,14 @@ export async function GET(request) {
     }
 
     const patients = await Patient.find(query)
-      .populate('agent', 'name userId role email mobile')
+      .populate({
+        path: 'agent',
+        select: 'name userId role email mobile parent',
+        populate: {
+          path: 'parent',
+          select: 'name userId role email mobile',
+        },
+      })
       .sort({ visitDate: -1, createdAt: -1 });
 
     return NextResponse.json({

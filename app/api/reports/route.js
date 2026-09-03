@@ -35,7 +35,7 @@ export async function GET(request) {
       const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
       const agentIds = agents.map((a) => a._id);
       
-      let allAllowed = [...supIds, ...agentIds];
+      let allAllowed = [authUser._id, ...supIds, ...agentIds];
       if (userIdParam) {
         allAllowed = allAllowed.filter((id) => id.toString() === userIdParam);
       }
@@ -43,10 +43,11 @@ export async function GET(request) {
     } else if (authUser.role === 'SUPERVISOR') {
       const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
       let agentIds = agents.map((a) => a._id);
+      let allAllowed = [authUser._id, ...agentIds];
       if (userIdParam) {
-        agentIds = agentIds.filter((id) => id.toString() === userIdParam);
+        allAllowed = allAllowed.filter((id) => id.toString() === userIdParam);
       }
-      allowedUserIds = agentIds;
+      allowedUserIds = allAllowed;
     } else {
       // Agent sees own report
       allowedUserIds = [authUser._id];
@@ -72,19 +73,51 @@ export async function GET(request) {
     // Aggregate metrics per user
     const reportData = await Promise.all(
       targetUsers.map(async (user) => {
+        // Collect all downline user IDs (including the target user themselves)
+        let downlineUserIds = [user._id];
+
+        if (user.role === 'ADMIN') {
+          const allUsers = await User.find({}).select('_id');
+          downlineUserIds = allUsers.map((u) => u._id);
+        } else if (user.role === 'COORDINATOR') {
+          const supervisors = await User.find({ parent: user._id, role: 'SUPERVISOR' }).select('_id');
+          const supIds = supervisors.map((s) => s._id);
+          const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+          const agentIds = agents.map((a) => a._id);
+          downlineUserIds = [user._id, ...supIds, ...agentIds];
+        } else if (user.role === 'SUPERVISOR') {
+          const agents = await User.find({ parent: user._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+          const agentIds = agents.map((a) => a._id);
+          downlineUserIds = [user._id, ...agentIds];
+        }
+
         const supplyQuery = { sender: user._id };
         if (Object.keys(dateFilter).length > 0) supplyQuery.supplyDate = dateFilter;
 
         const receivedQuery = { receiver: user._id };
         if (Object.keys(dateFilter).length > 0) receivedQuery.supplyDate = dateFilter;
 
-        const patientQuery = { agent: user._id };
+        // Cumulative patient query across target user's downline tree
+        const patientQuery = { agent: { $in: downlineUserIds } };
         if (Object.keys(dateFilter).length > 0) patientQuery.visitDate = dateFilter;
 
         const [suppliesSent, suppliesReceived, patientsEntered] = await Promise.all([
-          Supply.find(supplyQuery).populate('receiver', 'name userId role'),
-          Supply.find(receivedQuery).populate('sender', 'name userId role'),
-          Patient.find(patientQuery),
+          Supply.find(supplyQuery)
+            .populate('receiver', 'name userId role email mobile')
+            .sort({ supplyDate: -1 }),
+          Supply.find(receivedQuery)
+            .populate('sender', 'name userId role email mobile')
+            .sort({ supplyDate: -1 }),
+          Patient.find(patientQuery)
+            .populate({
+              path: 'agent',
+              select: 'name userId role email mobile parent',
+              populate: {
+                path: 'parent',
+                select: 'name userId role email mobile',
+              },
+            })
+            .sort({ visitDate: -1 }),
         ]);
 
         const totalSentAmount = suppliesSent.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
@@ -105,12 +138,13 @@ export async function GET(request) {
           suppliesSentCount: suppliesSent.length,
           totalSentAmount,
           totalSentQuantity,
+          suppliesSentList: suppliesSent, // Full list for popup modal
           suppliesReceivedCount: suppliesReceived.length,
           totalReceivedAmount,
           totalReceivedQuantity,
+          suppliesReceivedList: suppliesReceived, // Full list for popup modal
           patientCount: patientsEntered.length,
-          recentSupplies: suppliesSent.slice(0, 5),
-          recentPatients: patientsEntered.slice(0, 5),
+          patients: patientsEntered, // Full patient records for popup modal
         };
       })
     );

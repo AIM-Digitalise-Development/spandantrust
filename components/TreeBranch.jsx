@@ -1,114 +1,144 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, User, Shield, Phone, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, Shield, Phone, Mail, CheckCircle, XCircle } from 'lucide-react';
 
 export default function TreeBranch({ node, level = 0 }) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const hasChildren = node.children && node.children.length > 0;
+  const children = node?.children || [];
+  const hasChildren = children.length > 0;
 
-  const getRoleStyle = (role) => {
+  const getRoleHeaderStyle = (role) => {
     switch (role) {
       case 'ADMIN':
-        return 'bg-purple-500/10 text-purple-600 border-purple-300 dark:text-purple-400 dark:border-purple-800';
+        return 'bg-purple-600 text-white border-purple-500';
       case 'COORDINATOR':
-        return 'bg-blue-500/10 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-800';
+        return 'bg-blue-600 text-white border-blue-500';
       case 'SUPERVISOR':
-        return 'bg-amber-500/10 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-800';
+        return 'bg-amber-600 text-white border-amber-500';
       case 'DIGITAL_OPD_AGENT':
-        return 'bg-emerald-500/10 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800';
+        return 'bg-emerald-600 text-white border-emerald-500';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-300';
+        return 'bg-slate-700 text-white border-slate-600';
+    }
+  };
+
+  const getCardBorderStyle = (role) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'border-purple-500/40 shadow-purple-500/10';
+      case 'COORDINATOR':
+        return 'border-blue-500/40 shadow-blue-500/10';
+      case 'SUPERVISOR':
+        return 'border-amber-500/40 shadow-amber-500/10';
+      case 'DIGITAL_OPD_AGENT':
+        return 'border-emerald-500/40 shadow-emerald-500/10';
+      default:
+        return 'border-slate-700';
     }
   };
 
   return (
-    <div className="relative my-2 select-none">
+    <div className="flex flex-col items-center select-none shrink-0">
       {/* Node Card */}
       <div
-        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${
-          level === 0
-            ? 'bg-slate-900 text-white border-slate-800 shadow-lg'
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-500/40 dark:hover:border-teal-500/40'
-        }`}
-        style={{ marginLeft: `${Math.min(level * 24, 96)}px` }}
+        className={`relative flex flex-col items-center bg-slate-900 border-2 text-white rounded-2xl shadow-xl w-64 p-4 transition-all duration-200 hover:scale-105 hover:z-20 ${getCardBorderStyle(
+          node.role
+        )}`}
       >
-        <div className="flex items-center gap-3">
-          {/* Collapse/Expand Toggle */}
-          {hasChildren ? (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-hidden"
-              aria-label={isExpanded ? 'Collapse' : 'Expand'}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-slate-500" />
-              )}
-            </button>
-          ) : (
-            <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800/60">
-              <User className="h-4 w-4 text-slate-400" />
-            </div>
-          )}
+        {/* Role Pill Header */}
+        <span
+          className={`text-[10px] font-black tracking-wider uppercase px-3 py-0.5 rounded-full border shadow-xs mb-2.5 ${getRoleHeaderStyle(
+            node.role
+          )}`}
+        >
+          {node.role.replace(/_/g, ' ')}
+        </span>
 
-          {/* User Details */}
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`font-semibold text-sm ${level === 0 ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-                {node.name}
-              </span>
-              <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-teal-700 dark:text-teal-400 font-medium">
-                {node.userId}
-              </span>
-              <span
-                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getRoleStyle(
-                  node.role
-                )}`}
-              >
-                {node.role.replace(/_/g, ' ')}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
-              {node.email && (
-                <span className="flex items-center gap-1">
-                  <Mail className="h-3 w-3 text-slate-400" />
-                  {node.email}
-                </span>
-              )}
-              {node.mobile && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3 text-slate-400" />
-                  {node.mobile}
-                </span>
-              )}
-            </div>
-          </div>
+        {/* User Icon & Name */}
+        <div className="flex items-center gap-2 mb-1 text-center">
+          <span className="font-bold text-sm text-slate-100 truncate max-w-[180px]">{node.name}</span>
         </div>
 
-        {/* Status Badge */}
-        <div className="mt-2 sm:mt-0 flex items-center gap-2">
+        {/* User ID */}
+        <span className="font-mono text-xs px-2.5 py-0.5 rounded-md bg-slate-950 text-teal-400 font-semibold mb-2.5 border border-slate-800">
+          {node.userId}
+        </span>
+
+        {/* Contact Info */}
+        <div className="w-full space-y-1 text-xs text-slate-400 border-t border-b border-slate-800/80 py-2 my-1">
+          {node.email && (
+            <div className="flex items-center justify-center gap-1.5 truncate">
+              <Mail className="h-3 w-3 text-teal-400 shrink-0" />
+              <span className="truncate">{node.email}</span>
+            </div>
+          )}
+          {node.mobile && (
+            <div className="flex items-center justify-center gap-1.5">
+              <Phone className="h-3 w-3 text-teal-400 shrink-0" />
+              <span>{node.mobile}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Status Pill & Downline Toggle */}
+        <div className="flex items-center justify-between w-full pt-1">
           {node.status === 'ACTIVE' ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <CheckCircle className="h-3 w-3" />
-              Active
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+              <CheckCircle className="h-3 w-3" /> Active
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-              <XCircle className="h-3 w-3" />
-              Inactive
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
+              <XCircle className="h-3 w-3" /> Inactive
             </span>
+          )}
+
+          {hasChildren && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 transition-colors focus:outline-hidden cursor-pointer"
+            >
+              <span>{children.length} Downline{children.length > 1 ? 's' : ''}</span>
+              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
           )}
         </div>
       </div>
 
-      {/* Children Branches */}
+      {/* Downward Stem Line if Node Has Children & Expanded */}
       {hasChildren && isExpanded && (
-        <div className="relative pl-3 border-l-2 border-slate-200 dark:border-slate-800 ml-4 sm:ml-6 mt-1 space-y-1">
-          {node.children.map((child) => (
-            <TreeBranch key={child.id || child.userId} node={child} level={level + 1} />
+        <div className="w-0.5 h-6 bg-teal-500/80 dark:bg-teal-400/80" />
+      )}
+
+      {/* Horizontal & Downward Branches for Children */}
+      {hasChildren && isExpanded && (
+        <div className="flex items-start justify-center relative pt-4">
+          {children.map((child, index) => (
+            <div key={child.id || child.userId} className="flex flex-col items-center relative px-4">
+              {/* Connector lines connecting children to parent */}
+              {children.length > 1 && (
+                <>
+                  {/* Left horizontal bar segment */}
+                  <div
+                    className={`absolute top-0 left-0 w-1/2 h-0.5 bg-teal-500/80 dark:bg-teal-400/80 ${
+                      index === 0 ? 'hidden' : ''
+                    }`}
+                  />
+                  {/* Right horizontal bar segment */}
+                  <div
+                    className={`absolute top-0 right-0 w-1/2 h-0.5 bg-teal-500/80 dark:bg-teal-400/80 ${
+                      index === children.length - 1 ? 'hidden' : ''
+                    }`}
+                  />
+                </>
+              )}
+
+              {/* Vertical line from horizontal bar to child card */}
+              <div className="w-0.5 h-4 bg-teal-500/80 dark:bg-teal-400/80" />
+
+              {/* Recursive child tree branch */}
+              <TreeBranch node={child} level={level + 1} />
+            </div>
           ))}
         </div>
       )}

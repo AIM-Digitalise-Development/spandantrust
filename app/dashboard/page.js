@@ -144,6 +144,14 @@ export default function DashboardOverviewPage() {
             value={stats?.totalAgents || 0}
             icon={Users}
             color="bg-emerald-500/10 text-emerald-500"
+            href="/dashboard/reports"
+          />
+          <StatCard
+            title="Total Downline Patients"
+            value={stats?.totalPatients || 0}
+            icon={Activity}
+            color="bg-teal-500/10 text-teal-500"
+            href="/dashboard/reports"
           />
           <StatCard
             title="Supplies Received (from Admin)"
@@ -171,6 +179,13 @@ export default function DashboardOverviewPage() {
             icon={Users}
             color="bg-emerald-500/10 text-emerald-500"
             href="/dashboard/agents"
+          />
+          <StatCard
+            title="Total Downline Patients"
+            value={stats?.totalPatients || 0}
+            icon={Activity}
+            color="bg-teal-500/10 text-teal-500"
+            href="/dashboard/reports"
           />
           <StatCard
             title="Supplies Received (from Coordinator)"

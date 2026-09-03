@@ -50,11 +50,15 @@ export async function GET() {
     if (authUser.role === 'COORDINATOR') {
       const supervisors = await User.find({ parent: authUser._id, role: 'SUPERVISOR' }).select('_id');
       const supIds = supervisors.map((s) => s._id);
-      const agentsCount = await User.countDocuments({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' });
+      const agents = await User.find({ parent: { $in: supIds }, role: 'DIGITAL_OPD_AGENT' }).select('_id');
+      const agentIds = agents.map((a) => a._id);
 
-      const [receivedSupplies, sentSupplies] = await Promise.all([
+      const downlineUserIds = [authUser._id, ...supIds, ...agentIds];
+
+      const [receivedSupplies, sentSupplies, totalPatients] = await Promise.all([
         Supply.find({ receiver: authUser._id }),
         Supply.find({ sender: authUser._id }),
+        Patient.countDocuments({ agent: { $in: downlineUserIds } }),
       ]);
 
       const medicineReceivedCount = receivedSupplies.length;
@@ -66,11 +70,12 @@ export async function GET() {
         success: true,
         stats: {
           totalSupervisors: supervisors.length,
-          totalAgents: agentsCount,
+          totalAgents: agents.length,
           medicineReceivedCount,
           medicineSuppliedCount,
           totalSentQuantity,
           totalSentAmount,
+          totalPatients,
         },
       });
     }
@@ -79,9 +84,12 @@ export async function GET() {
       const agents = await User.find({ parent: authUser._id, role: 'DIGITAL_OPD_AGENT' }).select('_id');
       const agentIds = agents.map((a) => a._id);
 
-      const [receivedSupplies, sentSupplies] = await Promise.all([
+      const downlineUserIds = [authUser._id, ...agentIds];
+
+      const [receivedSupplies, sentSupplies, totalPatients] = await Promise.all([
         Supply.find({ receiver: authUser._id }),
         Supply.find({ sender: authUser._id }),
+        Patient.countDocuments({ agent: { $in: downlineUserIds } }),
       ]);
 
       const medicineReceivedCount = receivedSupplies.length;
@@ -97,6 +105,7 @@ export async function GET() {
           medicineSuppliedCount,
           totalSentQuantity,
           totalSentAmount,
+          totalPatients,
         },
       });
     }
