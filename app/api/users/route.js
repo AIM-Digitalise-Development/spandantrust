@@ -14,12 +14,23 @@ export async function GET(request) {
     const roleFilter = searchParams.get('role');
     const search = searchParams.get('search') || '';
     const statusFilter = searchParams.get('status');
+    const supplyReceivers = searchParams.get('supplyReceivers') === 'true';
 
     await connectToDatabase();
 
     let query = {};
 
-    if (authUser.role === 'ADMIN') {
+    if (supplyReceivers) {
+      if (authUser.role === 'ADMIN') {
+        query = { parent: authUser._id, role: 'COORDINATOR', status: 'ACTIVE' };
+      } else if (authUser.role === 'COORDINATOR') {
+        query = { parent: authUser._id, role: 'SUPERVISOR', status: 'ACTIVE' };
+      } else if (authUser.role === 'SUPERVISOR') {
+        query = { parent: authUser._id, role: 'DIGITAL_OPD_AGENT', status: 'ACTIVE' };
+      } else {
+        return NextResponse.json({ success: true, users: [] });
+      }
+    } else if (authUser.role === 'ADMIN') {
       if (roleFilter) {
         query.role = roleFilter;
       }
@@ -40,7 +51,7 @@ export async function GET(request) {
       return NextResponse.json({ success: true, users: [] });
     }
 
-    if (statusFilter) {
+    if (!supplyReceivers && statusFilter) {
       query.status = statusFilter;
     }
 

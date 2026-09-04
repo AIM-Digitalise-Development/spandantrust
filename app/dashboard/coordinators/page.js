@@ -22,6 +22,18 @@ export default function ManageCoordinatorsPage() {
   const [formError, setFormError] = useState('');
   const [createdResult, setCreatedResult] = useState(null);
 
+  const [authUser, setAuthUser] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setAuthUser(data.user);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
   const fetchCoordinators = async (searchTerm = search) => {
     try {
       setLoading(true);
@@ -44,6 +56,31 @@ export default function ManageCoordinatorsPage() {
 
     return () => clearTimeout(timer);
   }, [search]);
+
+  const handleToggleStatus = async (userToUpdate) => {
+    const newStatus = userToUpdate.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      setUpdatingId(userToUpdate._id);
+      const res = await fetch(`/api/users/${userToUpdate._id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCoordinators((prev) =>
+          prev.map((c) => (c._id === userToUpdate._id ? { ...c, status: newStatus } : c))
+        );
+      } else {
+        alert(data.error || 'Failed to update user status');
+      }
+    } catch (err) {
+      console.error('Error toggling status:', err);
+      alert('Failed to update status.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleCreateCoordinator = async (e) => {
     e.preventDefault();
@@ -176,15 +213,35 @@ export default function ManageCoordinatorsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {c.status === 'ACTIVE' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="h-3 w-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                          <XCircle className="h-3 w-3" /> Inactive
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {c.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 className="h-3 w-3" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <XCircle className="h-3 w-3" /> Inactive
+                          </span>
+                        )}
+
+                        {authUser?.role === 'ADMIN' && (
+                          <button
+                            onClick={() => handleToggleStatus(c)}
+                            disabled={updatingId === c._id}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 ${
+                              c.status === 'INACTIVE'
+                                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {updatingId === c._id
+                              ? 'Updating...'
+                              : c.status === 'INACTIVE'
+                              ? 'Activate'
+                              : 'Deactivate'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

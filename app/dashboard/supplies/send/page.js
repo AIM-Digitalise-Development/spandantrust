@@ -24,7 +24,7 @@ export default function SendMedicineSupplyPage() {
     try {
       setLoading(true);
       const [usersRes, suppliesRes] = await Promise.all([
-        fetch('/api/users'),
+        fetch('/api/users?supplyReceivers=true'),
         fetch(`/api/supplies?search=${encodeURIComponent(searchTerm)}`),
       ]);
 

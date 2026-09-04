@@ -14,7 +14,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { role, name, dob, gender, email, mobile, address, documentBase64 } = body;
+    const { role, name, dob, gender, email, mobile, address, documentBase64, parentId: requestedParentId } = body;
 
     if (!role || !name || !dob || !gender || !email || !mobile || !address) {
       return NextResponse.json(
@@ -43,8 +43,41 @@ export async function POST(request) {
       );
     }
 
-    // Parent is derived strictly from server-side authenticated session
-    const parentId = authUser._id;
+    // Parent assignment logic
+    let parentId = authUser._id;
+    if (authUser.role === 'ADMIN') {
+      if (role === 'SUPERVISOR') {
+        if (!requestedParentId) {
+          return NextResponse.json(
+            { success: false, error: 'Must select an active Coordinator under whom to assign this Supervisor.' },
+            { status: 400 }
+          );
+        }
+        const parentCoord = await User.findOne({ _id: requestedParentId, role: 'COORDINATOR', status: 'ACTIVE' });
+        if (!parentCoord) {
+          return NextResponse.json(
+            { success: false, error: 'Selected parent Coordinator does not exist or is inactive.' },
+            { status: 400 }
+          );
+        }
+        parentId = parentCoord._id;
+      } else if (role === 'DIGITAL_OPD_AGENT') {
+        if (!requestedParentId) {
+          return NextResponse.json(
+            { success: false, error: 'Must select an active Supervisor under whom to assign this Digital OPD Agent.' },
+            { status: 400 }
+          );
+        }
+        const parentSup = await User.findOne({ _id: requestedParentId, role: 'SUPERVISOR', status: 'ACTIVE' });
+        if (!parentSup) {
+          return NextResponse.json(
+            { success: false, error: 'Selected parent Supervisor does not exist or is inactive.' },
+            { status: 400 }
+          );
+        }
+        parentId = parentSup._id;
+      }
+    }
 
     // Initial password format: DOB in DD-MM-YYYY
     const initialPassword = formatInitialPasswordFromDOB(dob);
@@ -79,7 +112,7 @@ export async function POST(request) {
       parent: parentId,
       documentUrl,
       documentPublicId,
-      status: 'ACTIVE',
+      status: 'INACTIVE',
     });
 
     // Dispatch welcome email with User ID & Initial DOB password

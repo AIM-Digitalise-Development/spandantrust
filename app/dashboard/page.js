@@ -91,14 +91,14 @@ export default function DashboardOverviewPage() {
             value={stats?.totalSupervisors || 0}
             icon={UserPlus}
             color="bg-purple-500/10 text-purple-500"
-            href="/dashboard/users?role=SUPERVISOR"
+            href="/dashboard/supervisors"
           />
           <StatCard
             title="Digital OPD Agents"
             value={stats?.totalAgents || 0}
             icon={Users}
             color="bg-emerald-500/10 text-emerald-500"
-            href="/dashboard/users?role=DIGITAL_OPD_AGENT"
+            href="/dashboard/agents"
           />
           <StatCard
             title="Total Patient Entries"

@@ -11,6 +11,9 @@ export default function ManageSupervisorsPage() {
   const [showModal, setShowModal] = useState(false);
 
   // Form state
+  const [authUser, setAuthUser] = useState(null);
+  const [coordinators, setCoordinators] = useState([]);
+  const [parentId, setParentId] = useState('');
   const [name, setName] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('Male');
@@ -21,6 +24,27 @@ export default function ManageSupervisorsPage() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [createdResult, setCreatedResult] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setAuthUser(data.user);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const fetchActiveCoordinators = async () => {
+    try {
+      const res = await fetch('/api/users?role=COORDINATOR&status=ACTIVE');
+      const data = await res.json();
+      if (data.success) {
+        setCoordinators(data.users || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchSupervisors = async (searchTerm = search) => {
     try {
@@ -34,6 +58,33 @@ export default function ManageSupervisorsPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const handleToggleStatus = async (userToUpdate) => {
+    const newStatus = userToUpdate.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      setUpdatingId(userToUpdate._id);
+      const res = await fetch(`/api/users/${userToUpdate._id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSupervisors((prev) =>
+          prev.map((s) => (s._id === userToUpdate._id ? { ...s, status: newStatus } : s))
+        );
+      } else {
+        alert(data.error || 'Failed to update user status');
+      }
+    } catch (err) {
+      console.error('Error toggling status:', err);
+      alert('Failed to update status.');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -63,6 +114,7 @@ export default function ManageSupervisorsPage() {
           mobile,
           address,
           documentBase64,
+          parentId: authUser?.role === 'ADMIN' ? parentId : undefined,
         }),
       });
 
@@ -78,6 +130,7 @@ export default function ManageSupervisorsPage() {
           initialPassword: data.initialPassword,
         });
         fetchSupervisors();
+        setParentId('');
         setName('');
         setDob('');
         setEmail('');
@@ -107,6 +160,9 @@ export default function ManageSupervisorsPage() {
           onClick={() => {
             setCreatedResult(null);
             setFormError('');
+            if (authUser?.role === 'ADMIN') {
+              fetchActiveCoordinators();
+            }
             setShowModal(true);
           }}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold text-sm shadow-md hover:from-purple-400 hover:to-indigo-400 transition-all cursor-pointer"
@@ -172,15 +228,35 @@ export default function ManageSupervisorsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {s.status === 'ACTIVE' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="h-3 w-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                          <XCircle className="h-3 w-3" /> Inactive
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {s.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 className="h-3 w-3" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <XCircle className="h-3 w-3" /> Inactive
+                          </span>
+                        )}
+
+                        {authUser?.role === 'ADMIN' && (
+                          <button
+                            onClick={() => handleToggleStatus(s)}
+                            disabled={updatingId === s._id}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 ${
+                              s.status === 'INACTIVE'
+                                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {updatingId === s._id
+                              ? 'Updating...'
+                              : s.status === 'INACTIVE'
+                              ? 'Activate'
+                              : 'Deactivate'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,6 +300,32 @@ export default function ManageSupervisorsPage() {
                   <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{formError}</span>
+                  </div>
+                )}
+
+                {authUser?.role === 'ADMIN' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Assign under Active Coordinator <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={parentId}
+                      onChange={(e) => setParentId(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-purple-500"
+                    >
+                      <option value="">-- Select Active Coordinator --</option>
+                      {coordinators.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name} ({c.userId})
+                        </option>
+                      ))}
+                    </select>
+                    {coordinators.length === 0 && (
+                      <p className="text-[11px] text-rose-500 mt-1">
+                        No active Coordinators found. Please activate a Coordinator first before creating a Supervisor under them.
+                      </p>
+                    )}
                   </div>
                 )}
 

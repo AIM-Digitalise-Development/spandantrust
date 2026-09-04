@@ -8,7 +8,21 @@ export default function OrganizationalTreePage() {
   const [tree, setTree] = useState(null);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(1);
-  const [viewMode, setViewMode] = useState('diagram'); // 'diagram' or 'list'
+  const [authUser, setAuthUser] = useState(null);
+
+  // Pan / Drag State
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setAuthUser(data.user);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
   const fetchTree = async () => {
     try {
@@ -30,8 +44,54 @@ export default function OrganizationalTreePage() {
   }, []);
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.15, 1.6));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.15, 0.5));
-  const handleResetZoom = () => setZoom(1);
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.15, 0.4));
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  // Mouse Drag to Pan
+  const handleMouseDown = (e) => {
+    if (e.target.closest('button, a, input, select')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch Drag to Pan for Mobile
+  const handleTouchStart = (e) => {
+    if (e.target.closest('button, a, input, select')) return;
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - pan.x,
+        y: e.touches[0].clientY - pan.y,
+      });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setPan({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -42,7 +102,7 @@ export default function OrganizationalTreePage() {
             <GitFork className="h-7 w-7 text-teal-500" /> SpandanTrust Hierarchy Diagram
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Top-down organizational tree diagram mapping all tiers and downlines.
+            Interactive top-down organizational tree diagram. Click and drag canvas to pan in any direction.
           </p>
         </div>
 
@@ -51,7 +111,7 @@ export default function OrganizationalTreePage() {
             onClick={fetchTree}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Tree
           </button>
         </div>
       </div>
@@ -75,8 +135,9 @@ export default function OrganizationalTreePage() {
           </span>
         </div>
 
-        {/* Zoom & View Controls */}
-        <div className="flex items-center gap-2 border-t md:border-t-0 pt-2 md:pt-0 border-slate-800">
+        {/* Zoom & Reset Controls */}
+        <div className="flex items-center gap-3 border-t md:border-t-0 pt-2 md:pt-0 border-slate-800 flex-wrap">
+          <span className="text-slate-400 text-[11px]">💡 Drag canvas to scroll/pan</span>
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={handleZoomOut}
@@ -95,29 +156,41 @@ export default function OrganizationalTreePage() {
             </button>
             <button
               onClick={handleResetZoom}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Reset Zoom"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1 text-[11px] px-2"
+              title="Reset Position & Zoom"
             >
               <Maximize2 className="h-3.5 w-3.5" />
+              <span>Reset</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Diagram Canvas */}
-      <div className="bg-slate-950 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden">
+      {/* Main Diagram Pan/Drag Canvas */}
+      <div
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`relative w-full overflow-hidden min-h-[600px] flex justify-center items-center select-none py-16 px-8 bg-slate-950 rounded-3xl border border-slate-800 shadow-2xl transition-cursor ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
         {loading ? (
           <div className="p-16 text-center text-slate-400 text-sm">Rendering Organizational Diagram...</div>
         ) : !tree ? (
           <div className="p-16 text-center text-slate-400 text-sm">Unable to load hierarchy tree.</div>
         ) : (
-          <div className="w-full overflow-x-auto overflow-y-auto p-12 min-h-[500px] flex justify-center items-start">
-            <div
-              className="transition-transform duration-300 transform-origin-top flex justify-center min-w-max"
-              style={{ transform: `scale(${zoom})` }}
-            >
-              <TreeBranch node={tree} level={0} />
-            </div>
+          <div
+            className="transition-transform duration-75 origin-center flex justify-center min-w-max pointer-events-auto"
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            }}
+          >
+            <TreeBranch node={tree} level={0} currentUserRole={authUser?.role} onStatusChange={fetchTree} />
           </div>
         )}
       </div>

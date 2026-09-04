@@ -3,10 +3,35 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, User, Shield, Phone, Mail, CheckCircle, XCircle } from 'lucide-react';
 
-export default function TreeBranch({ node, level = 0 }) {
+export default function TreeBranch({ node, level = 0, currentUserRole, onStatusChange }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const children = node?.children || [];
   const hasChildren = children.length > 0;
+
+  const handleToggleStatus = async () => {
+    if (!node?.id) return;
+    const newStatus = node.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      setUpdatingStatus(true);
+      const res = await fetch(`/api/users/${node.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success && onStatusChange) {
+        onStatusChange();
+      } else if (!data.success) {
+        alert(data.error || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const getRoleHeaderStyle = (role) => {
     switch (role) {
@@ -81,22 +106,38 @@ export default function TreeBranch({ node, level = 0 }) {
           )}
         </div>
 
-        {/* Status Pill & Downline Toggle */}
-        <div className="flex items-center justify-between w-full pt-1">
-          {node.status === 'ACTIVE' ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-              <CheckCircle className="h-3 w-3" /> Active
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
-              <XCircle className="h-3 w-3" /> Inactive
-            </span>
-          )}
+        {/* Status Pill & Action Buttons */}
+        <div className="flex items-center justify-between w-full pt-1 gap-1">
+          <div className="flex items-center gap-1.5">
+            {node.status === 'ACTIVE' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+                <CheckCircle className="h-3 w-3" /> Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
+                <XCircle className="h-3 w-3" /> Inactive
+              </span>
+            )}
+
+            {currentUserRole === 'ADMIN' && node.role !== 'ADMIN' && (
+              <button
+                onClick={handleToggleStatus}
+                disabled={updatingStatus}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer disabled:opacity-50 ${
+                  node.status === 'INACTIVE'
+                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-xs'
+                    : 'bg-slate-800 hover:bg-rose-500 text-slate-300 hover:text-white'
+                }`}
+              >
+                {updatingStatus ? '...' : node.status === 'INACTIVE' ? 'Activate' : 'Deactivate'}
+              </button>
+            )}
+          </div>
 
           {hasChildren && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 transition-colors focus:outline-hidden cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 transition-colors focus:outline-hidden cursor-pointer shrink-0"
             >
               <span>{children.length} Downline{children.length > 1 ? 's' : ''}</span>
               {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -137,7 +178,7 @@ export default function TreeBranch({ node, level = 0 }) {
               <div className="w-0.5 h-4 bg-teal-500/80 dark:bg-teal-400/80" />
 
               {/* Recursive child tree branch */}
-              <TreeBranch node={child} level={level + 1} />
+              <TreeBranch node={child} level={level + 1} currentUserRole={currentUserRole} onStatusChange={onStatusChange} />
             </div>
           ))}
         </div>

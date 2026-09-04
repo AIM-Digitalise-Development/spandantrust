@@ -40,6 +40,13 @@ export async function POST(request) {
       );
     }
 
+    if (receiver.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot supply medicine to an INACTIVE user. User must be activated by Admin first.' },
+        { status: 400 }
+      );
+    }
+
     // Enforce allowed role pairing
     const isAllowedRolePair = validateSupplyPermission(authUser.role, receiver.role);
     if (!isAllowedRolePair) {

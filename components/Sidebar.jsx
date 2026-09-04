@@ -25,6 +25,8 @@ export default function Sidebar({ user, isMobileOpen, setIsMobileOpen }) {
         return [
           { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
           { name: 'Coordinators', href: '/dashboard/coordinators', icon: UserCheck },
+          { name: 'Supervisors', href: '/dashboard/supervisors', icon: UserPlus },
+          { name: 'OPD Agents', href: '/dashboard/agents', icon: Users },
           { name: 'All Users', href: '/dashboard/users', icon: Users },
           { name: 'Supply Medicine', href: '/dashboard/supplies/send', icon: Truck },
           { name: 'Hierarchy Tree', href: '/dashboard/tree', icon: GitFork },
