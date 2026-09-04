@@ -69,7 +69,17 @@ export default function OrganizationalTreePage() {
     setIsDragging(false);
   };
 
-  // Touch Drag to Pan for Mobile
+  // Touch Drag & Pinch-to-Zoom for Mobile
+  const [touchDistance, setTouchDistance] = useState(null);
+  const [initialZoom, setInitialZoom] = useState(1);
+
+  const getDistance = (touches) => {
+    return Math.hypot(
+      touches[0].clientX - touches[1].clientX,
+      touches[0].clientY - touches[1].clientY
+    );
+  };
+
   const handleTouchStart = (e) => {
     if (e.target.closest('button, a, input, select')) return;
     if (e.touches.length === 1) {
@@ -78,19 +88,44 @@ export default function OrganizationalTreePage() {
         x: e.touches[0].clientX - pan.x,
         y: e.touches[0].clientY - pan.y,
       });
+      setTouchDistance(null);
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = getDistance(e.touches);
+      setTouchDistance(dist);
+      setInitialZoom(zoom);
     }
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    setPan({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y,
-    });
+    if (e.touches.length === 2 && touchDistance) {
+      const dist = getDistance(e.touches);
+      const scale = dist / touchDistance;
+      const newZoom = Math.min(Math.max(initialZoom * scale, 0.3), 2.2);
+      setZoom(newZoom);
+    } else if (e.touches.length === 1 && isDragging) {
+      setPan({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    }
   };
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
+  const handleTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      setTouchDistance(null);
+    }
+    if (e.touches.length === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleWheel = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+      setZoom((prev) => Math.min(Math.max(prev + zoomDelta, 0.3), 2.2));
+    }
   };
 
   return (
@@ -102,7 +137,7 @@ export default function OrganizationalTreePage() {
             <GitFork className="h-7 w-7 text-teal-500" /> SpandanTrust Hierarchy Diagram
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Interactive top-down organizational tree diagram. Click and drag canvas to pan in any direction.
+            Interactive top-down organizational tree diagram. Drag canvas to pan, pinch or scroll to zoom.
           </p>
         </div>
 
@@ -137,7 +172,7 @@ export default function OrganizationalTreePage() {
 
         {/* Zoom & Reset Controls */}
         <div className="flex items-center gap-3 border-t md:border-t-0 pt-2 md:pt-0 border-slate-800 flex-wrap">
-          <span className="text-slate-400 text-[11px]">💡 Drag canvas to scroll/pan</span>
+          <span className="text-slate-400 text-[11px]">💡 Drag to pan • Pinch to zoom</span>
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={handleZoomOut}
@@ -175,6 +210,7 @@ export default function OrganizationalTreePage() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
         className={`relative w-full overflow-hidden min-h-[600px] flex justify-center items-center select-none py-16 px-8 bg-slate-950 rounded-3xl border border-slate-800 shadow-2xl transition-cursor ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
