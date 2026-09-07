@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { UserCircle, KeyRound, CheckCircle2, AlertCircle, ShieldCheck, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import AgreementCertificate from '@/components/AgreementCertificate';
+import UserIdentityCard from '@/components/UserIdentityCard';
 
 export default function UserProfilePage() {
   const [user, setUser] = useState(null);
@@ -71,7 +73,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 max-w-6xl">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <UserCircle className="h-7 w-7 text-teal-500" /> Account Profile & Settings
@@ -204,6 +206,29 @@ export default function UserProfilePage() {
           </button>
         </form>
       </div>
+
+      {/* Official Documents & Authorization Section (Visible for all non-admin users) */}
+      {user?.role !== 'ADMIN' && (
+        <div className="space-y-6 pt-2">
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+              Official Documents & Identity
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+              View, print, and download your authorized Spandan Trust agreement certificate and member identity card.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-7">
+                <AgreementCertificate user={user} />
+              </div>
+              <div className="lg:col-span-5">
+                <UserIdentityCard user={user} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
