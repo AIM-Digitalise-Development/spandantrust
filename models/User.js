@@ -72,6 +72,10 @@ const UserSchema = new mongoose.Schema(
       default: 'INACTIVE',
       index: true,
     },
+    activationEmailSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

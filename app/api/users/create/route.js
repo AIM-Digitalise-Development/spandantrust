@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { getAuthUser, validateCreationPermission, hashPassword } from '@/lib/auth';
 import { generateUserId, formatInitialPasswordFromDOB } from '@/lib/idGenerator';
 import { uploadDocumentToCloudinary } from '@/lib/cloudinary';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendRegistrationReceivedEmail } from '@/lib/email';
 
 export async function POST(request) {
   try {
@@ -115,14 +115,12 @@ export async function POST(request) {
       status: 'INACTIVE',
     });
 
-    // Dispatch welcome email with User ID & Initial DOB password
-    sendWelcomeEmail({
+    // Dispatch registration received email (pending Admin approval)
+    sendRegistrationReceivedEmail({
       toEmail: newUser.email,
       name: newUser.name,
-      userId: newUser.userId,
-      initialPassword,
       role: newUser.role,
-    }).catch((err) => console.error('Failed sending welcome email asynchronously:', err));
+    }).catch((err) => console.error('Failed sending registration received email asynchronously:', err));
 
     return NextResponse.json({
       success: true,

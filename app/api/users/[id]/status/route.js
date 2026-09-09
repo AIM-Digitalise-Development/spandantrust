@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import { getAuthUser } from '@/lib/auth';
+import { formatInitialPasswordFromDOB } from '@/lib/idGenerator';
+import { sendAccountApprovedEmail } from '@/lib/email';
 
 export async function PATCH(request, { params }) {
   try {
@@ -31,18 +33,35 @@ export async function PATCH(request, { params }) {
 
     await connectToDatabase();
 
-    const updatedUser = await User.findByIdAndUpdate(
-      targetUserId,
-      { status },
-      { new: true }
-    ).select('-passwordHash');
-
-    if (!updatedUser) {
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
       return NextResponse.json(
         { success: false, error: 'User not found.' },
         { status: 404 }
       );
     }
+
+    const isFirstActivation = status === 'ACTIVE' && (!targetUser.activationEmailSent || targetUser.status === 'INACTIVE');
+    const updateData = { status };
+
+    if (isFirstActivation) {
+      updateData.activationEmailSent = true;
+
+      const initialPassword = formatInitialPasswordFromDOB(targetUser.dob);
+      sendAccountApprovedEmail({
+        toEmail: targetUser.email,
+        name: targetUser.name,
+        userId: targetUser.userId,
+        initialPassword,
+        role: targetUser.role,
+      }).catch((err) => console.error('Failed sending account approved email asynchronously:', err));
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      targetUserId,
+      updateData,
+      { new: true }
+    ).select('-passwordHash');
 
     return NextResponse.json({
       success: true,
