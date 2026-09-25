@@ -80,8 +80,19 @@ export default function TreeBranch({ node, level = 0, currentUserRole, onStatusC
           {node.role.replace(/_/g, ' ')}
         </span>
 
-        {/* User Icon & Name */}
-        <div className="flex items-center gap-2 mb-1 text-center">
+        {/* User Photo Avatar & Name */}
+        <div className="flex flex-col items-center gap-1.5 mb-1 text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-700 bg-slate-950 overflow-hidden flex items-center justify-center shadow-md">
+            {node.photoUrl ? (
+              <img
+                src={node.photoUrl}
+                alt={node.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="h-6 w-6 text-slate-400" />
+            )}
+          </div>
           <span className="font-bold text-sm text-slate-100 truncate max-w-[180px]">{node.name}</span>
         </div>
 

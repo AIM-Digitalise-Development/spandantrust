@@ -40,6 +40,7 @@ export async function GET() {
       address: user.address,
       status: user.status,
       documentUrl: user.documentUrl,
+      photoUrl: user.photoUrl,
       createdAt: user.createdAt,
       parent: user.parent
         ? {

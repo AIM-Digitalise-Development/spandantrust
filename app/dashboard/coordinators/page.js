@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CloudinaryUpload from '@/components/CloudinaryUpload';
+import ProfilePhotoUpload from '@/components/ProfilePhotoUpload';
 import { UserCheck, Plus, Search, Mail, Phone, Calendar, FileText, CheckCircle2, XCircle, AlertCircle, Copy } from 'lucide-react';
 
 export default function ManageCoordinatorsPage() {
@@ -17,6 +18,7 @@ export default function ManageCoordinatorsPage() {
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
+  const [photoBase64, setPhotoBase64] = useState('');
   const [documentBase64, setDocumentBase64] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -85,6 +87,12 @@ export default function ManageCoordinatorsPage() {
   const handleCreateCoordinator = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    if (!photoBase64) {
+      setFormError('Profile photo is mandatory. Please upload a profile photo.');
+      return;
+    }
+
     setFormSubmitting(true);
 
     try {
@@ -99,6 +107,7 @@ export default function ManageCoordinatorsPage() {
           email,
           mobile,
           address,
+          photoBase64,
           documentBase64,
         }),
       });
@@ -121,6 +130,7 @@ export default function ManageCoordinatorsPage() {
         setEmail('');
         setMobile('');
         setAddress('');
+        setPhotoBase64('');
         setDocumentBase64('');
       }
     } catch (err) {
@@ -189,7 +199,18 @@ export default function ManageCoordinatorsPage() {
                 {coordinators.map((c) => (
                   <tr key={c._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-4 py-3.5 font-mono font-bold text-teal-600 dark:text-teal-400">{c.userId}</td>
-                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">{c.name}</td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/30 overflow-hidden flex items-center justify-center shrink-0">
+                          {c.photoUrl ? (
+                            <img src={c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="font-bold text-teal-600 text-xs">{c.name?.[0]?.toUpperCase() || 'C'}</span>
+                          )}
+                        </div>
+                        <span>{c.name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 space-y-0.5">
                       <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" />{c.email}</div>
                       <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" />{c.mobile}</div>
@@ -364,6 +385,12 @@ export default function ManageCoordinatorsPage() {
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-teal-500"
                   />
                 </div>
+
+                <ProfilePhotoUpload
+                  onPhotoSelect={(base64) => setPhotoBase64(base64)}
+                  label="Profile Photo *"
+                  required={true}
+                />
 
                 <CloudinaryUpload
                   onFileSelect={(base64) => setDocumentBase64(base64)}

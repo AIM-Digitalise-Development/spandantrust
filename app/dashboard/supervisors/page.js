@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CloudinaryUpload from '@/components/CloudinaryUpload';
+import ProfilePhotoUpload from '@/components/ProfilePhotoUpload';
 import { UserPlus, Plus, Search, Mail, Phone, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
 export default function ManageSupervisorsPage() {
@@ -20,6 +21,7 @@ export default function ManageSupervisorsPage() {
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
+  const [photoBase64, setPhotoBase64] = useState('');
   const [documentBase64, setDocumentBase64] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -99,6 +101,12 @@ export default function ManageSupervisorsPage() {
   const handleCreateSupervisor = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    if (!photoBase64) {
+      setFormError('Profile photo is mandatory. Please upload a profile photo.');
+      return;
+    }
+
     setFormSubmitting(true);
 
     try {
@@ -113,6 +121,7 @@ export default function ManageSupervisorsPage() {
           email,
           mobile,
           address,
+          photoBase64,
           documentBase64,
           parentId: authUser?.role === 'ADMIN' ? parentId : undefined,
         }),
@@ -136,6 +145,7 @@ export default function ManageSupervisorsPage() {
         setEmail('');
         setMobile('');
         setAddress('');
+        setPhotoBase64('');
         setDocumentBase64('');
       }
     } catch (err) {
@@ -204,7 +214,18 @@ export default function ManageSupervisorsPage() {
                 {supervisors.map((s) => (
                   <tr key={s._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-4 py-3.5 font-mono font-bold text-purple-600 dark:text-purple-400">{s.userId}</td>
-                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">{s.name}</td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0">
+                          {s.photoUrl ? (
+                            <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="font-bold text-purple-600 text-xs">{s.name?.[0]?.toUpperCase() || 'S'}</span>
+                          )}
+                        </div>
+                        <span>{s.name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 space-y-0.5">
                       <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" />{s.email}</div>
                       <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" />{s.mobile}</div>
@@ -404,6 +425,12 @@ export default function ManageSupervisorsPage() {
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-purple-500"
                   />
                 </div>
+
+                <ProfilePhotoUpload
+                  onPhotoSelect={(base64) => setPhotoBase64(base64)}
+                  label="Profile Photo *"
+                  required={true}
+                />
 
                 <CloudinaryUpload
                   onFileSelect={(base64) => setDocumentBase64(base64)}

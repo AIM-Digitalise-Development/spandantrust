@@ -105,9 +105,9 @@ export default function UserIdentityCard({ user }) {
           <div className="px-5 pt-7 pb-4 text-center space-y-3 flex-1 flex flex-col justify-center">
             {/* Avatar / Photo */}
             <div className="relative mx-auto w-24 h-24 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 border-4 border-slate-900 shadow-xl overflow-hidden flex items-center justify-center">
-              {user?.documentUrl ? (
+              {user?.photoUrl ? (
                 <img
-                  src={user.documentUrl}
+                  src={user.photoUrl}
                   alt={user?.name}
                   className="w-full h-full object-cover"
                 />

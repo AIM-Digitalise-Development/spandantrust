@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Mail, Phone, ShieldCheck, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { Users, Search, Mail, Phone, ShieldCheck, CheckCircle2, XCircle, FileText, User } from 'lucide-react';
 
 export default function AllUsersPage() {
   const [users, setUsers] = useState([]);
@@ -152,7 +152,18 @@ export default function AllUsersPage() {
                         {u.role.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">{u.name}</td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/30 overflow-hidden flex items-center justify-center shrink-0">
+                          {u.photoUrl ? (
+                            <img src={u.photoUrl} alt={u.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="font-bold text-teal-600 text-xs">{u.name?.[0]?.toUpperCase() || 'U'}</span>
+                          )}
+                        </div>
+                        <span>{u.name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 space-y-0.5">
                       <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" />{u.email}</div>
                       <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" />{u.mobile}</div>

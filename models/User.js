@@ -66,6 +66,14 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    photoUrl: {
+      type: String,
+      default: '',
+    },
+    photoPublicId: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'INACTIVE'],
@@ -84,5 +92,9 @@ const UserSchema = new mongoose.Schema(
 
 UserSchema.index({ parent: 1, role: 1 });
 
-// Prevent re-compilation of model during hot reloads
+// Prevent re-compilation of model during hot reloads while evicting stale cached schemas
+if (mongoose.models.User && !mongoose.models.User.schema.path('photoUrl')) {
+  delete mongoose.models.User;
+}
+
 export default mongoose.models.User || mongoose.model('User', UserSchema);

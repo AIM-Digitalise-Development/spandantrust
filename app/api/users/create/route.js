@@ -14,11 +14,18 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { role, name, dob, gender, email, mobile, address, documentBase64, parentId: requestedParentId } = body;
+    const { role, name, dob, gender, email, mobile, address, photoBase64, documentBase64, parentId: requestedParentId } = body;
 
     if (!role || !name || !dob || !gender || !email || !mobile || !address) {
       return NextResponse.json(
         { success: false, error: 'All common user fields (role, name, dob, gender, email, mobile, address) are required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!photoBase64) {
+      return NextResponse.json(
+        { success: false, error: 'Profile photo is mandatory. Please upload a profile photo.' },
         { status: 400 }
       );
     }
@@ -86,7 +93,22 @@ export async function POST(request) {
     // Collision-free unique user ID
     const userId = generateUserId(role);
 
-    // Document upload to Cloudinary
+    // Mandatory Profile Photo upload to Cloudinary
+    let photoUrl = '';
+    let photoPublicId = '';
+    try {
+      const photoUploadResult = await uploadDocumentToCloudinary(photoBase64, 'profile_photos');
+      photoUrl = photoUploadResult.url;
+      photoPublicId = photoUploadResult.publicId;
+    } catch (photoError) {
+      console.error('Profile photo Cloudinary upload error:', photoError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to upload profile photo to Cloudinary. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Document upload to Cloudinary (optional ID proof)
     let documentUrl = '';
     let documentPublicId = '';
     if (documentBase64) {
@@ -110,6 +132,8 @@ export async function POST(request) {
       address: address.trim(),
       passwordHash,
       parent: parentId,
+      photoUrl,
+      photoPublicId,
       documentUrl,
       documentPublicId,
       status: 'INACTIVE',
@@ -134,6 +158,7 @@ export async function POST(request) {
         mobile: newUser.mobile,
         dob: newUser.dob,
         parent: newUser.parent,
+        photoUrl: newUser.photoUrl,
         documentUrl: newUser.documentUrl,
       },
       initialPassword, // returned for display in admin toast/modal during creation

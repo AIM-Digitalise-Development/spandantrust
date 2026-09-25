@@ -13,12 +13,14 @@ export async function GET() {
     await connectToDatabase();
 
     const formatNode = (user, children = []) => ({
-      id: user._id.toString(),
+      id: user._id ? user._id.toString() : user.id,
       userId: user.userId,
       name: user.name,
       role: user.role,
       email: user.email,
       mobile: user.mobile,
+      photoUrl: user.photoUrl || '',
+      documentUrl: user.documentUrl || '',
       status: user.status,
       createdAt: user.createdAt,
       children,

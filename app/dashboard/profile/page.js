@@ -1,13 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserCircle, KeyRound, CheckCircle2, AlertCircle, ShieldCheck, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { UserCircle, KeyRound, CheckCircle2, AlertCircle, ShieldCheck, Mail, Phone, MapPin, Calendar, Camera, Loader2 } from 'lucide-react';
 import AgreementCertificate from '@/components/AgreementCertificate';
 import UserIdentityCard from '@/components/UserIdentityCard';
 
 export default function UserProfilePage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Profile Photo Upload State
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   // Change Password Form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -31,6 +36,53 @@ export default function UserProfilePage() {
     }
     loadProfile();
   }, []);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+    setPhotoMessage('');
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please select a valid image file (JPG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image size must be under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result;
+      setPhotoUploading(true);
+
+      try {
+        const res = await fetch('/api/auth/update-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoBase64: base64String }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          setPhotoError(data.error || 'Failed to update profile photo.');
+        } else {
+          setPhotoMessage('Profile photo updated successfully!');
+          setUser((prev) => ({ ...prev, photoUrl: data.photoUrl }));
+        }
+      } catch (err) {
+        setPhotoError('Network error while uploading photo.');
+      } finally {
+        setPhotoUploading(false);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -85,19 +137,66 @@ export default function UserProfilePage() {
 
       {/* Profile Details Card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        {photoError && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{photoError}</span>
+          </div>
+        )}
+
+        {photoMessage && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{photoMessage}</span>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 dark:border-slate-800 gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg shadow-teal-500/20">
-              {user?.name?.[0]?.toUpperCase() || 'U'}
+            {/* Avatar Photo with Camera Edit Overlay */}
+            <div className="relative group shrink-0">
+              <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 border-2 border-teal-500/40 shadow-lg shadow-teal-500/20 overflow-hidden flex items-center justify-center">
+                {user?.photoUrl ? (
+                  <img
+                    src={user.photoUrl}
+                    alt={user?.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-slate-950 font-black text-3xl">
+                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                )}
+              </div>
+
+              <label
+                className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-slate-900 text-teal-400 hover:bg-teal-500 hover:text-slate-950 border border-slate-700 shadow-md cursor-pointer transition-all flex items-center justify-center"
+                title="Update Profile Photo"
+              >
+                {photoUploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Camera className="h-3.5 w-3.5" />
+                )}
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={handlePhotoChange}
+                  disabled={photoUploading}
+                  className="hidden"
+                />
+              </label>
             </div>
+
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</h2>
               <p className="text-xs font-mono font-semibold text-teal-600 dark:text-teal-400 mt-0.5">
                 User ID: {user?.userId}
               </p>
+              <p className="text-[11px] text-slate-400 mt-1">Click the camera icon on photo to update profile picture</p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 self-start sm:self-center">
             <ShieldCheck className="h-4 w-4" /> {user?.role?.replace(/_/g, ' ')}
           </span>
         </div>
