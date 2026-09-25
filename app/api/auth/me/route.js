@@ -1,13 +1,28 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
+import connectToDatabase from '@/lib/db';
+import User from '@/models/User';
 
 export async function GET() {
-  const user = await getAuthUser();
+  const authUser = await getAuthUser();
 
-  if (!user) {
+  if (!authUser) {
     return NextResponse.json(
       { success: false, error: 'Not authenticated' },
       { status: 401 }
+    );
+  }
+
+  await connectToDatabase();
+  const user = await User.findById(authUser._id)
+    .populate('parent', 'name userId role mobile email')
+    .select('-passwordHash')
+    .lean();
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'User not found' },
+      { status: 404 }
     );
   }
 
@@ -26,6 +41,16 @@ export async function GET() {
       status: user.status,
       documentUrl: user.documentUrl,
       createdAt: user.createdAt,
+      parent: user.parent
+        ? {
+            id: user.parent._id,
+            name: user.parent.name,
+            userId: user.parent.userId,
+            role: user.parent.role,
+            mobile: user.parent.mobile,
+            email: user.parent.email,
+          }
+        : null,
     },
   });
 }
